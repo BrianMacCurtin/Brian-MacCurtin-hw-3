@@ -29,6 +29,7 @@ For this assignment, we will be using the [Wine Quality](https://archive.ics.uci
 We will be using the following libraries:
 
 ```{r}
+rm(list = ls())
 library(readr)
 library(tidyr)
 library(dplyr)
@@ -90,7 +91,7 @@ df <-
          "free_sulfur_dioxide" = "free.sulfur.dioxide",
          "total_sulfur_dioxide" = "total.sulfur.dioxide") %>%
   select(-c(fixed_acidity,free_sulfur_dioxide)) 
-  
+ 
 df$type <- as.factor(df$type)
   
 df <- na.omit(df)  
@@ -121,18 +122,34 @@ Recall from STAT 200, the method to compute the $t$ statistic for the the differ
 
 
 ```{r}
-#df %>%
- # mutate(redmean = mean(quality, type = "red"),
-  #       whitemean = mean(quality, type = "white"))
- 
-#df %>%
-  #mutate(diff_mean = redmean - whitemean)
+whitemean <- mean(df$quality[df$type == "white"])
+redmean <- mean(df$quality[df$type == "red"])
 
 
+diff_mean <- whitemean - redmean
+diff_mean
 
-diff_mean <- 
-#sp <-  ... # Insert your code here
-#t1 <-  ... # Insert your code here
+df %>%
+  group_by(type) %>%
+  filter(type == "white") %>%
+  summarize(whitenum = n(),
+            whitevar = var(quality))
+
+df %>%
+  group_by(type) %>%
+  filter(type == "red") %>%
+  summarize(rednum = n(),
+            redevar = var(quality))
+
+# Formula is ((whitenum-1)*whitevar + (rednum-1)*redvar)/(whitenum+rednum-2)
+
+sp_squared <- ((4898-1)*.7843557 + (1599-1)*.6521684)/(4898+1599-2)
+sp_squared
+
+# Formula is diff_mean/(sqrt(sp_squared*(1/whitenmum + 1/rednum)))
+
+t1 <- diff_mean/(sqrt(sp_squared*(1/4898 +1/1599)))
+t1
 ```
 
 
@@ -145,8 +162,9 @@ Equivalently, R has a function called `t.test()` which enables you to perform a 
 Perform a two-sample t-test to compare the quality of white and red wines using the `t.test()` function with the setting `var.equal=TRUE`. Store the t-statistic in `t2`.
 
 ```{r}
-t_test <- t.test(...) # Insert your code here
-t2 <- ... # Insert your code here
+t_test <- t.test(df1$quality, df2$quality, var.equal = TRUE) 
+t2 <- t_test$statistic
+t2
 ```
 
 ---
@@ -172,10 +190,10 @@ t3
 Print a vector containing the values of `t1`, `t2`, and `t3`. What can you conclude from this? Why?
 
 ```{r}
-c(t1, t2, t3) # Insert your code here
+c(t1, t2, t3) 
 ```
 
-
+The first one is slightly different then the others due to rounding because I did it by hand. Otherwise, these numbers are the same, and should be the same. From the 9.685 t-value, we can conclude that we should have a significant p-value, which means that we should reject the null hypothesis. In context of the problem, we would be rejecting that white wine has a similar mean as red wine. We can conclude that these means are significantly different from each other
 
 
 <br><br><br><br>
@@ -198,6 +216,7 @@ Fit a linear regression model with all predictors against the response variable 
 
 ```{r}
 full_model <- lm(quality ~ ., data = df)
+#summary(full_model) DELETE BEFORE SUBMITTING
 broom::tidy(full_model)
 ```
 
@@ -232,13 +251,13 @@ DO THIS GHRBEJ,ANIRLJNAVKLBJK
 Visualize the correlation matrix of all numeric columns in `df` using `corrplot()`
 
 ```{r}
-df5 <-
+cordf <-
   df %>% 
-  keep(is.numeric)
+  keep(is.numeric) %>%
+  cor()
   
-corrplot(df5, type="upper", order="hclust")
+corrplot(cordf, type="upper", order="hclust")
 ```
-
 
 
 ---
@@ -303,7 +322,12 @@ forward_formula <- formula(backward_model)
 3. Then, use the `cv.glmnet()` function to perform LASSO and Ridge regression with `X` and `y`.
 
 ```{r}
-... # Insert your code here. 
+y <- df$quality
+
+X <- make_model_matrix(full_model)
+
+lasso <- cv.glmnet(X, y, alpha = 1)
+ridge <- cv.glmnet(X, y, alpha = 0)
 ```
 
 Create side-by-side plots of the ridge and LASSO regression results. Interpret your main findings. 
@@ -380,6 +404,12 @@ Use:
 to **generate all possible linear regression formulas** using the variables in `x_vars`. This is most optimally achieved using the `map()` function from the `purrr` package.
 
 ```{r}
+make_formula <- function(x){
+  as.formula(
+    paste("quality ~ ", paste(x, collapse = " + "))
+  )
+}
+
 formulas <- map(
   1:length(x_vars),
   \(x){
