@@ -146,7 +146,7 @@ df %>%
 sp_squared <- ((4898-1)*.7843557 + (1599-1)*.6521684)/(4898+1599-2)
 sp_squared
 
-# Formula is diff_mean/(sqrt(sp_squared*(1/whitenmum + 1/rednum)))
+# Formula is diff_mean/(sqrt(sp_squared*(1/whitenum + 1/rednum)))
 
 t1 <- diff_mean/(sqrt(sp_squared*(1/4898 +1/1599)))
 t1
@@ -193,7 +193,7 @@ Print a vector containing the values of `t1`, `t2`, and `t3`. What can you concl
 c(t1, t2, t3) 
 ```
 
-The first one is slightly different then the others due to rounding because I did it by hand. Otherwise, these numbers are the same, and should be the same. From the 9.685 t-value, we can conclude that we should have a significant p-value, which means that we should reject the null hypothesis. In context of the problem, we would be rejecting that white wine has a similar mean as red wine. We can conclude that these means are significantly different from each other
+The first one is slightly different then the others due to rounding because I did it by hand. Otherwise, these numbers are the same, and should be the same. From the 9.685 t-value, we can conclude that we should have a significant p-value, which means that we should reject the null hypothesis. In context of the problem, we would be rejecting that white wine has a similar mean as red wine. We can conclude that these means are significantly different from each other.
 
 
 <br><br><br><br>
@@ -216,7 +216,7 @@ Fit a linear regression model with all predictors against the response variable 
 
 ```{r}
 full_model <- lm(quality ~ ., data = df)
-#summary(full_model) DELETE BEFORE SUBMITTING
+summary(full_model) #DELETE BEFORE SUBMITTING
 broom::tidy(full_model)
 ```
 
@@ -238,7 +238,6 @@ summary(model_citric)
 ```{r}
 model_sulfur <- lm(quality ~ total_sulfur_dioxide, data = df)
 summary(model_sulfur)
-
 ```
 
 DO THIS GHRBEJ,ANIRLJNAVKLBJK
@@ -324,18 +323,36 @@ forward_formula <- formula(backward_model)
 ```{r}
 y <- df$quality
 
+make_model_matrix <- function(formula){
+  X <- model.matrix(formula, df)[, -1]
+  cnames <- colnames(X)
+  for(i in 1:ncol(X)){
+    if(!cnames[i] == "typewhite"){
+      X[, i] <- scale(X[, i])
+    } else {
+      colnames(X)[i] <- "type"
+    }
+  }
+  return(X)
+}
+
 X <- make_model_matrix(full_model)
 
 lasso <- cv.glmnet(X, y, alpha = 1)
+lasso
 ridge <- cv.glmnet(X, y, alpha = 0)
+ridge
 ```
 
 Create side-by-side plots of the ridge and LASSO regression results. Interpret your main findings. 
 
 ```{r}
 par(mfrow=c(1, 2))
-... # Insert your code here. 
+plot(ridge, main = "Ridge", cex.main = .7)
+plot(lasso, main = "LASSO", cex.main = .7)
 ```
+
+DO THIS HGJEKL MFSVTNJWLKEVIEGJLNWKSM.
 
 ---
 
@@ -345,6 +362,22 @@ Print the coefficient values for LASSO regression at the `lambda.1se` value? Wha
 
 Store the variable names with non-zero coefficients in `lasso_vars`, and create a formula object called `lasso_formula` using the `make_formula()` function provided in the Appendix. 
 
+```{r}
+lasso_coef <- coef(lasso, s = "lambda.1se")
+lasso_coef
+
+lasso_vars <- rownames(lasso_coef)[which(abs(lasso_coef) > 0)][-1]
+
+make_formula <- function(x){
+  as.formula(
+    paste("quality ~ ", paste(x, collapse = " + "))
+  )
+}
+
+lasso_formula <- make_formula(lasso_vars)
+```
+
+The variables selected by LASSO are the ones without the dots. The variables selected are volatile_acidity, residual_sugar, total_sulfur_dioxide, pH, sulphates, and alcohol.
 
 ---
 
@@ -354,7 +387,22 @@ Print the coefficient values for ridge regression at the `lambda.1se` value? Wha
 
 Store the variable names with non-zero coefficients in `ridge_vars`, and create a formula object called `ridge_formula` using the `make_formula()` function provided in the Appendix. 
 
+```{r}
+ridge_coef <- coef(ridge, s = "lambda.1se")
+ridge_coef
 
+ridge_vars <- rownames(ridge_coef)[which(abs(ridge_coef) > 0)][-1]
+
+make_formula <- function(x){
+  as.formula(
+    paste("quality ~ ", paste(x, collapse = " + "))
+  )
+}
+
+ridge_formula <- make_formula(ridge_vars)
+```
+
+Ridge selects all of the variables since there are no dots.
 
 ---
 
@@ -362,7 +410,7 @@ Store the variable names with non-zero coefficients in `ridge_vars`, and create 
 
 What is the difference between stepwise selection, LASSO and ridge based on you analyses above?
 
-
+DO THIS GERUIJKASBVUHIGRESAJKBV,
 
 
 
@@ -384,6 +432,8 @@ Variable selection
 ###### 4.1  (5 points)
 
 Excluding `quality` from `df` we have $10$ possible predictors as the covariates. How many different models can we create using any subset of these $10$ coavriates as possible predictors? Justify your answer. 
+
+DO THIS THIUWRJKDSRUQGHIJABKGQRJKL 1024 with null model -> 1023 without null model
 
 ---
 
@@ -413,8 +463,8 @@ make_formula <- function(x){
 formulas <- map(
   1:length(x_vars),
   \(x){
-    vars <- combn(...) # Insert code here
-    map(vars, ...) # Insert code here
+    vars <- combn(x_vars, x, simplify = FALSE)
+    map(vars, make_formula) 
   }
 ) %>% unlist()
 ```
@@ -423,6 +473,7 @@ If your code is right the following command should return something along the li
 
 ```{r}
 sample(formulas, 4) %>% as.character()
+
 # Output:
 # [1] "quality ~ volatile_acidity + residual_sugar + density + pH + alcohol"                                                 
 # [2] "quality ~ citric_acid"                                                                                                
@@ -436,8 +487,12 @@ sample(formulas, 4) %>% as.character()
 Use `map()` and `lm()` to fit a linear regression model to each formula in `formulas`, using `df` as the data source. Use `broom::glance()` to extract the model summary statistics, and bind them together into a single tibble of summaries using the `bind_rows()` function from `dplyr`.
 
 ```{r}
-models <- map(formulas, ...) # Insert your code here
-summaries <- map(models, ...) # Insert your code here
+library(broom)
+
+models <- map(formulas, ~lm(.x, data = df))
+summaries <- map(models, glance) %>%
+  bind_rows()
+
 ```
 
 
@@ -450,13 +505,15 @@ summaries <- map(models, ...) # Insert your code here
 Extract the `adj.r.squared` values from `summaries` and use them to identify the formula with the _**highest**_ adjusted R-squared value.
 
 ```{r}
-... # Insert your code here
+adj_r_squared <- summaries$adj.r.squared
+highest_r_squared <- formulas[[which.max(adj_r_squared)]]
+highest_r_squared
 ```
 
 Store resulting formula as a variable called `rsq_formula`.
 
 ```{r}
-rsq_formula <- ... # Insert your code
+rsq_formula <- formula(highest_r_squared)
 ```
 
 ---
@@ -467,14 +524,16 @@ Extract the `AIC` values from `summaries` and use them to identify the formula w
 
 
 ```{r}
-... # Insert your code here
+aic <- summaries$AIC
+lowest_aic <- formulas[[which.min(aic)]]
+lowest_aic
 ```
 
 Store resulting formula as a variable called `aic_formula`.
 
 
 ```{r}
-aic_formula <- ... # Insert your code
+aic_formula <- formula(lowest_aic)
 ```
 
 ---
@@ -497,6 +556,8 @@ final_formulas <- c(
   rsq_formula,
   aic_formula
 )
+
+final_formulas
 ```
 
 * Are `aic_formula` and `rsq_formula` the same? How do they differ from the formulas shortlisted in question 3?
@@ -560,7 +621,7 @@ The `make_model_matrix` function below takes a `formula` as input and outputs a 
 
 ```{r}
 make_model_matrix <- function(formula){
-  X <- model.matrix(rsq_formula, df)[, -1]
+  X <- model.matrix(formula, df)[, -1]
   cnames <- colnames(X)
   for(i in 1:ncol(X)){
     if(!cnames[i] == "typewhite"){
