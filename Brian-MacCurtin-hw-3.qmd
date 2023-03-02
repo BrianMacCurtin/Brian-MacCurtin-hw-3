@@ -28,7 +28,7 @@ For this assignment, we will be using the [Wine Quality](https://archive.ics.uci
 
 We will be using the following libraries:
 
-```{r}
+```{r, message = FALSE}
 rm(list = ls())
 library(readr)
 library(tidyr)
@@ -95,7 +95,7 @@ df <-
 df$type <- as.factor(df$type)
   
 df <- na.omit(df)  
-df
+head(df)
 
 dim(df)
 ```
@@ -193,7 +193,7 @@ Print a vector containing the values of `t1`, `t2`, and `t3`. What can you concl
 c(t1, t2, t3) 
 ```
 
-The first one is slightly different then the others due to rounding because I did it by hand. Otherwise, these numbers are the same, and should be the same. From the 9.685 t-value, we can conclude that we should have a significant p-value, which means that we should reject the null hypothesis. In context of the problem, we would be rejecting that white wine has a similar mean as red wine. We can conclude that these means are significantly different from each other.
+The first one is slightly different then the others due to rounding because I did it by hand. Otherwise, these numbers are the same, and should be the same. From the 9.685 t-value, we can conclude that we should have a significant p-value, which means that we should reject the null hypothesis. In context of the problem, we can say that type is a useful predictor for quality. We would also be rejecting that white wine has a similar mean as red wine. We can conclude that these means are significantly different from each other.
 
 
 <br><br><br><br>
@@ -216,12 +216,10 @@ Fit a linear regression model with all predictors against the response variable 
 
 ```{r}
 full_model <- lm(quality ~ ., data = df)
-summary(full_model) #DELETE BEFORE SUBMITTING
 broom::tidy(full_model)
 ```
 
-DO THIS GHUQERAJKNV,HGQULJNKVAM,QGHULJANKFV
-
+In a model with all of the potential predictors, the variables citric_acid and total_sulfur_dioxide are not statistically significant and aren't useful in predicting quality. We can also see that the variables volatile_acidity, chlorides, total_sulfur_dioxide, and density have negative slopes. Holding all other variables constant, as one of these variables increases, the quality decreases. Also, since the coefficient for typewhite is negative, this means that the quality for white wines is lower than the quality for red wines
 
 ---
 
@@ -240,7 +238,7 @@ model_sulfur <- lm(quality ~ total_sulfur_dioxide, data = df)
 summary(model_sulfur)
 ```
 
-DO THIS GHRBEJ,ANIRLJNAVKLBJK
+We can see in models by themselves, the variables citric_acid and total_sulfur_acid are both significant. By themselves, they are both useful predictors of quality. Compared to the full model, the two individual models both have higher global p-vales and lower values of r-squared. Also, the residual standard error is higher compared to the full model.
 
 
 ---
@@ -250,12 +248,12 @@ DO THIS GHRBEJ,ANIRLJNAVKLBJK
 Visualize the correlation matrix of all numeric columns in `df` using `corrplot()`
 
 ```{r}
-cordf <-
+R <-
   df %>% 
   keep(is.numeric) %>%
   cor()
   
-corrplot(cordf, type="upper", order="hclust")
+corrplot(R, type="upper", order="hclust")
 ```
 
 
@@ -270,7 +268,7 @@ Compute the variance inflation factor (VIF) for each predictor in the full model
 vif(full_model)
 ```
 
-DO THIS GEYHBJNVDMJEGKQJHEFVAKBJAEFJBDM
+Using the threshold of 2, we can see that variables such as residual_sugar, density, alcohol and type are well over this threshold and variables like volatile_acidity and total_sulfur_dioxide are also slightly over the threshold. This would suggest higher levels of correlation between these variables and the other variables, which leads to multicollinearity
 
 <br><br><br><br>
 <br><br><br><br>
@@ -293,7 +291,6 @@ Run a backward stepwise regression using a `full_model` object as the starting m
 ```{r}
 backward_model <- step(full_model, direction = "backward", scope=formula(full_model))
 backward_formula <- formula(backward_model)
-
 ```
 
 ---
@@ -352,7 +349,7 @@ plot(ridge, main = "Ridge", cex.main = .7)
 plot(lasso, main = "LASSO", cex.main = .7)
 ```
 
-DO THIS HGJEKL MFSVTNJWLKEVIEGJLNWKSM.
+We can see that for the LASSO plot, as lambda increases, the number of variables decreases because some of their coefficients get shrunk to zero. For the ridge plot, as lambda increases, the variable coefficients get shrunk, but not quite to zero. The ridge plot still has 10 variables even as lambda increases. We can also see that the dashed lines fall at lower lambda values for the lasso plot compared to the ridge plot
 
 ---
 
@@ -377,7 +374,7 @@ make_formula <- function(x){
 lasso_formula <- make_formula(lasso_vars)
 ```
 
-The variables selected by LASSO are the ones without the dots. The variables selected are volatile_acidity, residual_sugar, total_sulfur_dioxide, pH, sulphates, and alcohol.
+The variables selected by LASSO are the ones without the dots. The variables selected are volatile_acidity, residual_sugar, chlorides, total_sulfur_dioxide, pH, sulphates, alcohol, and type.
 
 ---
 
@@ -410,7 +407,7 @@ Ridge selects all of the variables since there are no dots.
 
 What is the difference between stepwise selection, LASSO and ridge based on you analyses above?
 
-DO THIS GERUIJKASBVUHIGRESAJKBV,
+We can see that the forwards and backwards methods produced the same model, which was different from LASSO and ridge. Ridge ended up with the full model, while LASSO ended up with a slightly smaller model. Also, for the stepwise method, we can see the actual steps that went into the adding or removing of each variable. For LASSO and ridge, we just end up with the final model that each produces. The variable coefficients for LASSO and ridge tend to be smaller than what they are for the stepwise methods
 
 
 
@@ -431,9 +428,9 @@ Variable selection
 
 ###### 4.1  (5 points)
 
-Excluding `quality` from `df` we have $10$ possible predictors as the covariates. How many different models can we create using any subset of these $10$ coavriates as possible predictors? Justify your answer. 
+Excluding `quality` from `df` we have $10$ possible predictors as the covariates. How many different models can we create using any subset of these $10$ covariates as possible predictors? Justify your answer. 
 
-DO THIS THIUWRJKDSRUQGHIJABKGQRJKL 1024 with null model -> 1023 without null model
+Since we have two possible outcomes for each predictor (added to the model or not), and 10 possible predictors, there are $2^{10}$ = 1024 different models. However, that includes the possibility that none of the predictors were added to the model. If we want all possible models using at least one predictor, there are 1023 possible models
 
 ---
 
@@ -562,9 +559,16 @@ final_formulas
 
 * Are `aic_formula` and `rsq_formula` the same? How do they differ from the formulas shortlisted in question 3?
 
+The aic_formula and rsq_formula are not the same. The aic method did not select the same variables as any other method. It was the only method to select 9 variables, leaving out citric_acid. The rsq_formula produced the same formula as the backwards and forward methods, but was different from everything else. The aic_formula and rsq_formula differ from all of the other formulas because th other formulas do a selection process of seeing whether or not variables should be added or removed to the model, based on their own different criterias. The aic_formula and rsq_formula look through every single combination of predictors, finding only the one with the lowest AIC and highest r-squared, respectively.
+
 * Which of these is more reliable? Why? 
 
+The model selected by forward, backward and aic is the most reliable since it was the model that was agreed on by the most methods. It also is the model with the smallest aic which means the model fits the data really well. Also, we don't have to be worried about the AIC method adding unnecessary variables to the model since there is a penalty associated with AIC when you keep on adding variables
+
 * If we had a dataset with $10,000$ columns, which of these methods would you consider for your analyses? Why?
+
+I would consider using LASSO and ridge regression because these two methods offer a penalty function for the number of predictors we add to the model. This means that these methods favor smaller models. Other models do this like forwards and backwards selection, but with the large number of columns we have, it would take a lot of time for these models to reach their conclusion. Also with r-squared and aic methods, it would take awhile to create every single combination of variables to look for the lowest AIC and highest r-squared. Another benefit of LASSO and ridge is that since there a lot of variables we are looking at, these methods do a good job dealing with high correlation between variables and multicollinearity.
+
 
 ---
 
@@ -576,13 +580,15 @@ Use `map()` and `glance()` to extract the `sigma, adj.r.squared, AIC, df`, and `
 ```{r}
 summary_table <- map(
   final_formulas, 
-  \(x) ... # Insert your code here
+  \(x) lm(x, data = df) %>%
+    broom::glance() %>%
+    select(sigma, adj.r.squared, AIC, df, p.value)
 ) %>% bind_rows()
 
 summary_table %>% knitr::kable()
 ```
 
-
+We can see that all the models that had p-values, had extremely significant p-values. The p-values were so small that they were approximately zero. Also we can see that a couple of methods came up with the same model. Backward, forward, and AIC methods all came up with the same model, while the ridge method was the same as the full model. We can also see that besides the null model, all the sigma values, adjusted r-squared values, and AIC values were extremely close for all the models. The sigma values ranged from .737 to .739, the adjusted r-squared values ranged from .283 to .288 and the AIC values ranged from 14483.89 to 14520.61.
 
 
 
